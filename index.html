@@ -206,7 +206,7 @@
   <h1>플랜두씨 다이어리</h1>
   <div class="tagline">계획(Plan) → 실제로 한 일(Do) → 돌아보기(See)가 이어지는 나만의 기록장</div>
   <div class="notice">지금은 로그인이 없어 링크를 아는 사람은 누구나 볼 수 있습니다. 남이 봐도 괜찮은 내용만 넣으세요.</div>
-  <div id="dbWarning" class="notice" style="display:none; border-left-color:var(--overdue-brick); background:#4A2A22;">지금 이 화면은 서버 저장소를 쓸 수 없는 상태입니다. 아무 것도 저장되지 않으니, 반드시 Claude가 게시한 링크로 열어주세요.</div>
+  <div id="dbWarning" class="notice" style="display:none; border-left-color:var(--overdue-brick); background:#4A2A22;">지금 서버 데이터베이스(Firestore)에 연결할 수 없습니다. 아무 것도 저장되지 않습니다. 인터넷 연결과 보안 규칙을 확인해주세요.</div>
   <nav class="tabs">
     <button data-tab="plan" class="active">계획</button>
     <button data-tab="todo">할 일</button>
@@ -450,21 +450,28 @@
 
 <div id="toast" class="toast"></div>
 
+<!-- Firebase (실제 서버 데이터베이스: Firestore) -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+
 <script>
 (function(){
   "use strict";
 
   // ---------- 상태 ----------
   var state = null;
-  var dbRef = null;         // 서버 저장소(db). 이게 없으면 자료를 저장하지 않는다(브라우저 저장소로 대신하지 않음).
-  var downloadsRef = null;
+  var firestoreDoc = null;  // Firestore 문서 참조. 이게 없으면 저장하지 않는다(브라우저 저장소로 대신하지 않음).
   var storageMode = 'unavailable'; // 'db' 또는 'unavailable'
   var inFlight = {}; // 완료 버튼 이중클릭 방지용
 
-  async function getCapability(name){
-    if(!window.claude || !window.claude.use) return null;
-    try{ return await window.claude.use(name); }catch(e){ return null; }
-  }
+  var firebaseConfig = {
+    apiKey: "AIzaSyAo2phx2RvLkt0trsZQ8Q0nWxPBM2kVl0c",
+    authDomain: "plds-dr.firebaseapp.com",
+    projectId: "plds-dr",
+    storageBucket: "plds-dr.firebasestorage.app",
+    messagingSenderId: "165990395383",
+    appId: "1:165990395383:web:42d89f2df364dc613312f2"
+  };
 
   function defaultState(){
     // 이전에 내보내신 자료(2026-09-16)를 처음 한 번만 채워 넣는 기본값.
@@ -499,25 +506,30 @@
   }
 
   async function loadState(){
-    // 서버 저장소(db)만 쓴다. 이게 없으면(=Claude가 게시한 화면이 아니면) 저장하지 않고 화면에도 그렇게 밝힌다.
-    dbRef = await getCapability("db");
-    if(!dbRef){
+    // 서버 저장소(Firestore)만 쓴다. 연결이 안 되면 저장하지 않고 화면에도 그렇게 밝힌다.
+    try{
+      firebase.initializeApp(firebaseConfig);
+      firestoreDoc = firebase.firestore().collection('app').doc('state');
+    }catch(e){
+      firestoreDoc = null;
+    }
+    if(!firestoreDoc){
       state = defaultState();
       storageMode = 'unavailable';
       document.getElementById('dbWarning').style.display = 'block';
       return;
     }
     try{
-      var snap = await dbRef.doc("app/state").get();
+      var snap = await firestoreDoc.get();
       if(snap.exists){
-        state = ensureShape(JSON.parse(JSON.stringify(snap.data())));
+        state = ensureShape(snap.data());
       } else {
         state = defaultState();
-        await dbRef.doc("app/state").set(state); // 처음 한 번, 시작값을 서버에 심어 둔다
+        await firestoreDoc.set(state); // 처음 한 번, 시작값을 서버에 심어 둔다
       }
       storageMode = 'db';
     }catch(e){
-      dbRef = null;
+      firestoreDoc = null;
       state = defaultState();
       storageMode = 'unavailable';
       document.getElementById('dbWarning').style.display = 'block';
@@ -525,12 +537,12 @@
   }
 
   async function saveState(){
-    if(!dbRef){
-      showToast('저장할 수 없습니다. Claude가 게시한 링크로 열어야 서버에 저장됩니다.');
+    if(!firestoreDoc){
+      showToast('저장할 수 없습니다. 서버 데이터베이스 연결을 확인해주세요.');
       return;
     }
     try{
-      await dbRef.doc("app/state").set(state);
+      await firestoreDoc.set(state);
     }catch(e){
       showToast('저장에 실패했습니다. 다시 시도해주세요.');
     }
@@ -1093,20 +1105,9 @@
   });
 
   // ================= 내보내기 =================
-  document.getElementById('exportBtn').addEventListener('click', async function(){
+  document.getElementById('exportBtn').addEventListener('click', function(){
     var blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
     var filename = 'plandoc-diary-export-' + todaySeoulStr() + '.json';
-
-    if(storageMode === 'db'){
-      if(!downloadsRef) downloadsRef = await getCapability("downloads");
-      if(downloadsRef){
-        try{
-          await downloadsRef.save({ filename: filename, data: blob });
-          showToast('내보내기 파일을 내려받았습니다.');
-          return;
-        }catch(e){ /* 실패하면 아래 일반 다운로드 방식으로 시도 */ }
-      }
-    }
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
     a.href = url;
@@ -1124,8 +1125,8 @@
     document.getElementById('loadingMsg').style.display = 'none';
     document.getElementById('storageModeText').textContent =
       storageMode === 'db'
-        ? '이 화면은 서버 저장소에 저장되며, 새로고침해도 값이 남습니다.'
-        : '지금은 서버 저장소에 연결되지 않아 아무 것도 저장되지 않습니다. Claude가 게시한 링크로 열어주세요.';
+        ? '이 화면은 서버 데이터베이스(Firestore)에 저장되며, 새로고침해도 값이 남습니다.'
+        : '지금은 서버 데이터베이스에 연결되지 않아 아무 것도 저장되지 않습니다.';
     renderPlans();
     refreshAllPlanSelects();
     renderCarryNote();
