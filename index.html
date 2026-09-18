@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>플랜두씨 다이어리</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F1EEE5;
+    --paper-line:#DAD5C6;
+    --ink:#22262B;
+    --ink-soft:#5B5F63;
+    --plan-blue:#33546E;
+    --done-ochre:#B8802B;
+    --overdue-brick:#9C3E30;
+    --card:#FAF8F2;
+    --radius:3px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    background-image:
+      linear-gradient(var(--paper-line) 1px, transparent 1px);
+    background-size: 100% 34px;
+    color:var(--ink);
+    font-family:'IBM Plex Sans KR', sans-serif;
+    line-height:1.6;
+  }
+  header.top{
+    background:var(--ink);
+    color:var(--paper);
+    padding:20px 20px 0 20px;
+  }
+  header.top h1{
+    font-family:'Noto Serif KR', serif;
+    font-weight:700;
+    font-size:1.5rem;
+    margin:0 0 4px 0;
+  }
+  header.top .tagline{
+    font-size:0.85rem;
+    color:#C9C4B4;
+    margin-bottom:14px;
+  }
+  .notice{
+    background:#3A3428;
+    border-left:4px solid var(--done-ochre);
+    color:#EDE7D6;
+    font-size:0.85rem;
+    padding:10px 14px;
+    margin:0 0 16px 0;
+    max-width:820px;
+  }
+  nav.tabs{
+    display:flex;
+    gap:2px;
+    max-width:820px;
+    margin:0 auto;
+    padding:0 20px;
+  }
+  nav.tabs button{
+    flex:1;
+    background:var(--ink);
+    color:#A9AEA2;
+    border:none;
+    border-bottom:3px solid transparent;
+    padding:14px 6px;
+    font-family:'IBM Plex Sans KR', sans-serif;
+    font-size:0.92rem;
+    font-weight:500;
+    cursor:pointer;
+  }
+  nav.tabs button.active{
+    color:#FAF8F2;
+    border-bottom-color:var(--done-ochre);
+  }
+  main{
+    max-width:820px;
+    margin:0 auto;
+    padding:22px 20px 80px 20px;
+  }
+  .view{display:none;}
+  .view.active{display:block;}
+  h2.section-title{
+    font-family:'Noto Serif KR', serif;
+    font-size:1.15rem;
+    font-weight:600;
+    margin:0 0 4px 0;
+  }
+  p.section-sub{
+    color:var(--ink-soft);
+    font-size:0.85rem;
+    margin:0 0 16px 0;
+  }
+  .card{
+    background:var(--card);
+    border:1px solid var(--paper-line);
+    border-radius:var(--radius);
+    padding:16px;
+    margin-bottom:14px;
+  }
+  .card.plan-card{border-left:4px solid var(--plan-blue);}
+  .card.todo-card.done{border-left:4px solid var(--done-ochre); opacity:0.86;}
+  .card.todo-card.overdue{border-left:4px solid var(--overdue-brick);}
+  .card.todo-card.open{border-left:4px solid var(--plan-blue);}
+  .row{display:flex; gap:8px; flex-wrap:wrap;}
+  .row > *{flex:1; min-width:130px;}
+  label{
+    display:block;
+    font-size:0.78rem;
+    color:var(--ink-soft);
+    margin:10px 0 3px 0;
+  }
+  input, select, textarea{
+    width:100%;
+    padding:8px 9px;
+    border:1px solid var(--paper-line);
+    border-radius:var(--radius);
+    font-family:inherit;
+    font-size:0.9rem;
+    background:#fff;
+    color:var(--ink);
+  }
+  textarea{resize:vertical; min-height:52px;}
+  button.btn{
+    background:var(--plan-blue);
+    color:#fff;
+    border:none;
+    border-radius:var(--radius);
+    padding:9px 16px;
+    font-size:0.88rem;
+    font-weight:500;
+    cursor:pointer;
+    font-family:inherit;
+  }
+  button.btn.secondary{background:none; border:1px solid var(--ink-soft); color:var(--ink);}
+  button.btn.ochre{background:var(--done-ochre);}
+  button.btn.brick{background:var(--overdue-brick);}
+  button.btn:disabled{opacity:0.5; cursor:default;}
+  button.link-btn{
+    background:none;border:none;color:var(--plan-blue);text-decoration:underline;
+    cursor:pointer; font-family:inherit; font-size:0.85rem; padding:0;
+  }
+  .btn-row{display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;}
+  .meta-line{font-size:0.78rem; color:var(--ink-soft); margin-top:6px;}
+  .tag-pill{
+    display:inline-block; background:var(--paper); border:1px solid var(--paper-line);
+    border-radius:12px; padding:1px 9px; font-size:0.72rem; margin-right:4px; color:var(--ink-soft);
+  }
+  details.history summary{cursor:pointer; font-size:0.8rem; color:var(--plan-blue); margin-top:8px;}
+  .history-item{
+    font-size:0.78rem; color:var(--ink-soft); border-top:1px dashed var(--paper-line);
+    padding:6px 0;
+  }
+  .empty-state{
+    border:1px dashed var(--paper-line); border-radius:var(--radius);
+    padding:26px 18px; text-align:center; color:var(--ink-soft); font-size:0.88rem;
+  }
+  .kpi-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;}
+  .kpi{
+    background:var(--card); border:1px solid var(--paper-line); border-radius:var(--radius);
+    padding:14px; text-align:left; cursor:pointer; font-family:inherit;
+  }
+  .kpi .num{font-family:'Noto Serif KR', serif; font-size:1.7rem; font-weight:700; display:block;}
+  .kpi .lbl{font-size:0.78rem; color:var(--ink-soft);}
+  .kpi.plan .num{color:var(--plan-blue);}
+  .kpi.done .num{color:var(--done-ochre);}
+  .kpi.overdue .num{color:var(--overdue-brick);}
+  .kpi.blocked .num{color:var(--ink);}
+  .drill-panel{
+    background:var(--card); border:1px solid var(--paper-line); border-radius:var(--radius);
+    padding:12px 14px; margin-bottom:16px; font-size:0.85rem;
+  }
+  .drill-panel h4{margin:0 0 8px 0; font-size:0.85rem;}
+  .drill-row{border-top:1px dashed var(--paper-line); padding:5px 0;}
+  .time-box{
+    background:var(--card); border:1px solid var(--paper-line); border-radius:var(--radius);
+    padding:14px; margin-bottom:16px;
+  }
+  .time-grid{display:flex; gap:16px; flex-wrap:wrap; margin-top:6px;}
+  .time-grid div{font-size:0.85rem;}
+  .time-grid b{font-family:'Noto Serif KR', serif; font-size:1.1rem;}
+  .toast{
+    position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+    background:var(--ink); color:#fff; padding:9px 18px; border-radius:var(--radius);
+    font-size:0.85rem; opacity:0; transition:opacity 0.25s; pointer-events:none; z-index:50;
+  }
+  .toast.show{opacity:1;}
+  .loading{color:var(--ink-soft); font-size:0.85rem; padding:20px 0;}
+  select#todoPlanSelect, select#reviewPlanSelect{font-weight:600;}
+  .carry-note{
+    background:#EFE6CE; border:1px solid #D8C48F; border-radius:var(--radius);
+    padding:8px 10px; font-size:0.8rem; margin:8px 0; color:#5A4A1E;
+  }
+  footer.appfoot{
+    max-width:820px; margin:0 auto; padding:0 20px 30px 20px; color:var(--ink-soft); font-size:0.78rem;
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <h1>플랜두씨 다이어리</h1>
+  <div class="tagline">계획(Plan) → 실제로 한 일(Do) → 돌아보기(See)가 이어지는 나만의 기록장</div>
+  <div class="notice">지금은 로그인이 없어 링크를 아는 사람은 누구나 볼 수 있습니다. 남이 봐도 괜찮은 내용만 넣으세요.</div>
+  <div id="dbWarning" class="notice" style="display:none; border-left-color:var(--overdue-brick); background:#4A2A22;">지금 이 화면은 서버 저장소를 쓸 수 없는 상태입니다. 아무 것도 저장되지 않으니, 반드시 Claude가 게시한 링크로 열어주세요.</div>
+  <nav class="tabs">
+    <button data-tab="plan" class="active">계획</button>
+    <button data-tab="todo">할 일</button>
+    <button data-tab="do">실제로 한 일</button>
+    <button data-tab="see">돌아보기</button>
+  </nav>
+</header>
+
+<main>
+
+  <div id="loadingMsg" class="loading">불러오는 중…</div>
+
+  <!-- ===================== 계획 ===================== -->
+  <section id="view-plan" class="view active">
+    <h2 class="section-title">계획 세우기</h2>
+    <p class="section-sub">지금 실제로 하고 있는 일 하나를 계획으로 옮기세요. 고쳐도 처음 계획은 그대로 남습니다.</p>
+
+    <div id="carryNoteBox"></div>
+
+    <div class="card">
+      <div class="row">
+        <div>
+          <label>제목</label>
+          <input id="p_title" placeholder="예: ALEPH 3주차 진행">
+        </div>
+        <div>
+          <label>분류</label>
+          <select id="p_category">
+            <option value="운동">운동</option>
+            <option value="공부">공부</option>
+            <option value="업무">업무</option>
+            <option value="게임 연습">게임 연습</option>
+            <option value="ALEPH 진행">ALEPH 진행</option>
+            <option value="기타">기타</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>기간 시작</label>
+          <input id="p_start" type="date">
+        </div>
+        <div>
+          <label>기간 끝</label>
+          <input id="p_end" type="date">
+        </div>
+        <div>
+          <label>우선순위</label>
+          <select id="p_priority">
+            <option value="높음">높음</option>
+            <option value="중간" selected>중간</option>
+            <option value="낮음">낮음</option>
+          </select>
+        </div>
+        <div>
+          <label>예상 시간(시간)</label>
+          <input id="p_hours" type="number" min="0" step="0.5" value="1">
+        </div>
+      </div>
+      <label>성공 기준</label>
+      <textarea id="p_success" placeholder="무엇을 해내면 성공인지 적어보세요"></textarea>
+      <div class="btn-row">
+        <button class="btn" id="p_saveBtn">계획 저장</button>
+        <button class="btn secondary" id="p_cancelEditBtn" style="display:none;">수정 취소</button>
+      </div>
+    </div>
+
+    <h2 class="section-title" style="margin-top:24px;">세워둔 계획</h2>
+    <div id="planList"></div>
+  </section>
+
+  <!-- ===================== 할일 ===================== -->
+  <section id="view-todo" class="view">
+    <h2 class="section-title">할 일 다루기</h2>
+    <p class="section-sub">계획에 딸린 할 일을 만들고 고치고, 완료로 바꾸거나 되돌립니다.</p>
+
+    <label>어느 계획의 할 일인가요</label>
+    <select id="todoPlanSelect"></select>
+
+    <div id="todoNoPlanMsg" class="empty-state" style="display:none;">먼저 [계획] 탭에서 계획을 하나 세워주세요.</div>
+
+    <div id="todoArea" style="display:none;">
+      <div class="card" style="margin-top:14px;">
+        <div class="row">
+          <div>
+            <label>할 일 제목</label>
+            <input id="t_title" placeholder="예: ALEPH 3주차 강의 3개 듣기">
+          </div>
+          <div>
+            <label>마감일</label>
+            <input id="t_deadline" type="date">
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>우선순위</label>
+            <select id="t_priority">
+              <option value="높음">높음</option>
+              <option value="중간" selected>중간</option>
+              <option value="낮음">낮음</option>
+            </select>
+          </div>
+          <div>
+            <label>태그(쉼표로 구분)</label>
+            <input id="t_tags" placeholder="예: 강의, 복습">
+          </div>
+          <div>
+            <label>예상 시간(시간)</label>
+            <input id="t_hours" type="number" min="0" step="0.5" value="1">
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn" id="t_saveBtn">할 일 저장</button>
+          <button class="btn secondary" id="t_cancelEditBtn" style="display:none;">수정 취소</button>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:14px;">
+        <div class="row">
+          <div>
+            <label>검색</label>
+            <input id="t_search" placeholder="제목으로 찾기">
+          </div>
+          <div>
+            <label>상태 필터</label>
+            <select id="t_filterStatus">
+              <option value="all">전체</option>
+              <option value="in_progress">진행 중</option>
+              <option value="done">완료</option>
+            </select>
+          </div>
+          <div>
+            <label>태그 필터</label>
+            <select id="t_filterTag">
+              <option value="all">전체</option>
+            </select>
+          </div>
+          <div>
+            <label>정렬 기준</label>
+            <select id="t_sort">
+              <option value="deadline_asc">마감일 빠른 순</option>
+              <option value="priority_desc">우선순위 높은 순</option>
+              <option value="created_desc">최근 등록 순</option>
+            </select>
+          </div>
+        </div>
+        <div class="meta-line" id="sortHint"></div>
+      </div>
+
+      <div id="todoList" style="margin-top:14px;"></div>
+    </div>
+  </section>
+
+  <!-- ===================== 실제로 한 일 ===================== -->
+  <section id="view-do" class="view">
+    <h2 class="section-title">실제로 한 일 적기</h2>
+    <p class="section-sub">계획과 별개로 실제 진행 상황을 남깁니다. 원래 계획 값은 지워지지 않습니다.</p>
+
+    <label>어느 계획인가요</label>
+    <select id="doPlanSelect"></select>
+
+    <div id="doNoTodoMsg" class="empty-state" style="display:none;">이 계획에 딸린 할 일이 아직 없습니다. [할 일] 탭에서 먼저 만들어주세요.</div>
+
+    <div id="doArea" style="display:none;">
+      <div class="card" style="margin-top:14px;">
+        <label>어느 할 일에 대한 기록인가요</label>
+        <select id="d_todoSelect"></select>
+        <div class="row">
+          <div>
+            <label>시작 시각</label>
+            <input id="d_start" type="datetime-local">
+          </div>
+          <div>
+            <label>끝난 시각</label>
+            <input id="d_end" type="datetime-local">
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>실제로 걸린 시간(시간)</label>
+            <input id="d_hours" type="number" min="0" step="0.25" value="1">
+          </div>
+          <div>
+            <label>막혔던 이유(없으면 비워두세요)</label>
+            <input id="d_block" placeholder="예: 자료를 못 찾아서 지연">
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn" id="d_saveBtn">기록 저장</button>
+        </div>
+      </div>
+      <div id="execList" style="margin-top:14px;"></div>
+    </div>
+  </section>
+
+  <!-- ===================== 돌아보기 ===================== -->
+  <section id="view-see" class="view">
+    <h2 class="section-title">돌아보기, 그리고 다음 계획으로</h2>
+    <p class="section-sub">숫자를 누르면 그 숫자가 나온 기록을 볼 수 있습니다.</p>
+
+    <label>어느 계획을 돌아볼까요</label>
+    <select id="reviewPlanSelect"></select>
+
+    <div id="reviewArea" style="display:none;">
+      <div class="kpi-grid">
+        <button class="kpi plan" id="kpi_plan"><span class="num">0</span><span class="lbl">할 일 수(지운 것 제외)</span></button>
+        <button class="kpi done" id="kpi_done"><span class="num">0</span><span class="lbl">완료 수</span></button>
+        <button class="kpi overdue" id="kpi_overdue"><span class="num">0</span><span class="lbl">지연 수</span></button>
+        <button class="kpi blocked" id="kpi_blocked"><span class="num">0</span><span class="lbl">막힘 수</span></button>
+      </div>
+
+      <div class="time-box">
+        <div class="section-sub" style="margin:0;">예상 시간과 실제 시간</div>
+        <div class="time-grid">
+          <div>예상 시간<br><b id="time_est">0</b>h</div>
+          <div>실제 시간<br><b id="time_act">0</b>h</div>
+          <div>차이(실제-예상)<br><b id="time_diff">0</b>h</div>
+        </div>
+      </div>
+
+      <div id="drillPanel" class="drill-panel" style="display:none;"></div>
+
+      <div class="card">
+        <label>이번 돌아보기에서 고칠 점 한 가지</label>
+        <textarea id="see_note" placeholder="다음 계획에 이어서 반영할 한 줄"></textarea>
+        <div class="btn-row">
+          <button class="btn ochre" id="see_saveNoteBtn">다음 계획으로 넘기기</button>
+        </div>
+        <div id="see_noteStatus" class="meta-line"></div>
+      </div>
+    </div>
+    <div id="reviewNoPlanMsg" class="empty-state">먼저 [계획] 탭에서 계획을 하나 세워주세요.</div>
+  </section>
+
+</main>
+
+<footer class="appfoot">
+  <button class="btn secondary" id="exportBtn">내 자료 전체 내보내기(JSON)</button>
+  <span id="storageModeText" style="margin-left:10px;">저장 위치 확인 중…</span>
+</footer>
+
+<div id="toast" class="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- 상태 ----------
+  var state = null;
+  var dbRef = null;         // 서버 저장소(db). 이게 없으면 자료를 저장하지 않는다(브라우저 저장소로 대신하지 않음).
+  var downloadsRef = null;
+  var storageMode = 'unavailable'; // 'db' 또는 'unavailable'
+  var inFlight = {}; // 완료 버튼 이중클릭 방지용
+
+  async function getCapability(name){
+    if(!window.claude || !window.claude.use) return null;
+    try{ return await window.claude.use(name); }catch(e){ return null; }
+  }
+
+  function defaultState(){
+    // 이전에 내보내신 자료(2026-09-16)를 처음 한 번만 채워 넣는 기본값.
+    // 이후 저장된 값이 있으면 이 값 대신 그 저장된 값을 불러온다.
+    return {"executions":[{"actualHours":0.2,"blockReason":"","createdAt":"2026-09-16T07:23:23.571Z","endTime":"2026-09-16T14:40","id":"32b491ff-f1fe-46a2-af94-6cb17b7eb906","startTime":"2026-09-16T14:30","todoId":"1a4b0e95-a867-4d12-82c3-c2ec6db4ef45"},{"actualHours":0.2,"blockReason":"","createdAt":"2026-09-16T07:24:13.758Z","endTime":"2026-09-16T16:23","id":"2d488b36-0596-4552-8474-a928b01cc16c","startTime":"2026-09-16T16:10","todoId":"def702d5-e785-462f-9248-e59dcff12f57"},{"actualHours":0.2,"blockReason":"","createdAt":"2026-09-16T07:24:35.596Z","endTime":"2026-09-16T16:23","id":"b73d546e-2196-4c1d-bdb1-a894df1a4853","startTime":"2026-09-16T16:10","todoId":"0241f892-863a-4332-aa92-a941bbe77cea"}],
+    "pendingCarryover":"과제 진행에 차질이 없도록 계획 잘 세우기",
+    "plans":[{"category":"공부","createdAt":"2026-09-16T07:17:56.543Z","estimatedHours":120,"history":[],"id":"ed31b442-d550-4421-8468-ecbbd68b69f0","periodEnd":"2026-12-31","periodStart":"2026-09-16","priority":"중간","successCriteria":"필기, 실기 합격","title":"자격증 취득","updatedAt":"2026-09-16T07:17:56.543Z"},{"category":"ALEPH 진행","createdAt":"2026-09-16T07:18:38.832Z","estimatedHours":75,"history":[],"id":"a514a119-c378-4512-82dd-a506dc62ab4f","periodEnd":"2026-10-16","periodStart":"2026-08-17","priority":"중간","successCriteria":"과제 제출 및 승인완료","title":"ALEPH 과제","updatedAt":"2026-09-16T07:18:38.832Z"}],
+    "reviewNotes":{"a514a119-c378-4512-82dd-a506dc62ab4f":"과제 진행에 차질이 없도록 계획 잘 세우기"},
+    "todos":[{"completionLog":[{"completedAt":"2026-09-16T07:24:54.739Z"}],"createdAt":"2026-09-16T07:19:27.455Z","deadline":"2026-09-16","deletedAt":null,"estimatedHours":0.5,"id":"1a4b0e95-a867-4d12-82c3-c2ec6db4ef45","planId":"a514a119-c378-4512-82dd-a506dc62ab4f","priority":"중간","status":"done","tags":["과제"],"title":"과제6 - 플랜두씨 다이어리 생성","updatedAt":"2026-09-16T07:24:54.739Z"},{"completionLog":[{"completedAt":"2026-09-16T07:24:55.664Z"}],"createdAt":"2026-09-16T07:20:01.185Z","deadline":"2026-09-16","deletedAt":null,"estimatedHours":0.3,"id":"def702d5-e785-462f-9248-e59dcff12f57","planId":"a514a119-c378-4512-82dd-a506dc62ab4f","priority":"중간","status":"done","tags":["과제"],"title":"과제6 - 플랜두씨 계획 세우기","updatedAt":"2026-09-16T07:24:55.664Z"},{"completionLog":[{"completedAt":"2026-09-16T07:24:57.460Z"}],"createdAt":"2026-09-16T07:20:27.399Z","deadline":"2026-09-16","deletedAt":null,"estimatedHours":0.2,"id":"0241f892-863a-4332-aa92-a941bbe77cea","planId":"a514a119-c378-4512-82dd-a506dc62ab4f","priority":"중간","status":"done","tags":["과제"],"title":"과제6 - 다이어리 할 일 채우기","updatedAt":"2026-09-16T07:24:57.460Z"},{"completionLog":[],"createdAt":"2026-09-16T07:21:05.276Z","deadline":"2026-09-16","deletedAt":null,"estimatedHours":0.1,"id":"d0769c5f-01a6-46e2-9c5f-d093a0584f06","planId":"a514a119-c378-4512-82dd-a506dc62ab4f","priority":"중간","status":"in_progress","tags":["과제"],"title":"과제6 - 할 일 완료하기","updatedAt":"2026-09-16T07:21:05.276Z"},{"completionLog":[],"createdAt":"2026-09-16T07:21:59.093Z","deadline":"2026-09-13","deletedAt":null,"estimatedHours":7,"id":"abe12dca-9007-445f-ba7f-03f75ab68ad4","planId":"a514a119-c378-4512-82dd-a506dc62ab4f","priority":"중간","status":"in_progress","tags":["과제"],"title":"과제4","updatedAt":"2026-09-16T07:21:59.093Z"}]};
+  }
+
+  function uid(){
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return 'id-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+  }
+
+  function nowISO(){ return new Date().toISOString(); }
+
+  function todaySeoulStr(){
+    // YYYY-MM-DD in Asia/Seoul
+    var f = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year:'numeric', month:'2-digit', day:'2-digit' });
+    return f.format(new Date());
+  }
+
+  function ensureShape(s){
+    if(!s.plans) s.plans = [];
+    if(!s.todos) s.todos = [];
+    if(!s.executions) s.executions = [];
+    if(!s.reviewNotes) s.reviewNotes = {};
+    if(s.pendingCarryover === undefined) s.pendingCarryover = null;
+    return s;
+  }
+
+  async function loadState(){
+    // 서버 저장소(db)만 쓴다. 이게 없으면(=Claude가 게시한 화면이 아니면) 저장하지 않고 화면에도 그렇게 밝힌다.
+    dbRef = await getCapability("db");
+    if(!dbRef){
+      state = defaultState();
+      storageMode = 'unavailable';
+      document.getElementById('dbWarning').style.display = 'block';
+      return;
+    }
+    try{
+      var snap = await dbRef.doc("app/state").get();
+      if(snap.exists){
+        state = ensureShape(JSON.parse(JSON.stringify(snap.data())));
+      } else {
+        state = defaultState();
+        await dbRef.doc("app/state").set(state); // 처음 한 번, 시작값을 서버에 심어 둔다
+      }
+      storageMode = 'db';
+    }catch(e){
+      dbRef = null;
+      state = defaultState();
+      storageMode = 'unavailable';
+      document.getElementById('dbWarning').style.display = 'block';
+    }
+  }
+
+  async function saveState(){
+    if(!dbRef){
+      showToast('저장할 수 없습니다. Claude가 게시한 링크로 열어야 서버에 저장됩니다.');
+      return;
+    }
+    try{
+      await dbRef.doc("app/state").set(state);
+    }catch(e){
+      showToast('저장에 실패했습니다. 다시 시도해주세요.');
+    }
+  }
+
+  function showToast(msg){
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(function(){ t.classList.remove('show'); }, 1800);
+  }
+
+  function esc(s){
+    var d = document.createElement('div');
+    d.textContent = (s===undefined || s===null) ? '' : String(s);
+    return d.innerHTML;
+  }
+
+  // ---------- 탭 전환 ----------
+  var LAST_TAB_KEY = 'plandoc-diary-last-tab';
+  var tabs = document.querySelectorAll('nav.tabs button');
+
+  function switchTab(tabName){
+    tabs.forEach(function(b){ b.classList.remove('active'); });
+    var btn = document.querySelector('nav.tabs button[data-tab="' + tabName + '"]');
+    if(!btn) return;
+    btn.classList.add('active');
+    document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('active'); });
+    document.getElementById('view-' + tabName).classList.add('active');
+    try{ localStorage.setItem(LAST_TAB_KEY, tabName); }catch(e){ /* 이 화면에서만 보던 탭을 기억 못할 뿐, 기능엔 지장 없음 */ }
+    if(tabName === 'todo') refreshTodoPlanSelect();
+    if(tabName === 'do') refreshDoPlanSelect();
+    if(tabName === 'see') refreshReviewPlanSelect();
+  }
+
+  tabs.forEach(function(btn){
+    btn.addEventListener('click', function(){ switchTab(btn.dataset.tab); });
+  });
+
+  function lastTabOrDefault(){
+    try{
+      var saved = localStorage.getItem(LAST_TAB_KEY);
+      if(saved && document.getElementById('view-' + saved)) return saved;
+    }catch(e){ /* 무시 */ }
+    return 'plan';
+  }
+
+  // ================= 계획(Plan) =================
+  var editingPlanId = null;
+
+  function planFieldsFromForm(){
+    return {
+      title: document.getElementById('p_title').value.trim(),
+      category: document.getElementById('p_category').value,
+      periodStart: document.getElementById('p_start').value,
+      periodEnd: document.getElementById('p_end').value,
+      priority: document.getElementById('p_priority').value,
+      successCriteria: document.getElementById('p_success').value.trim(),
+      estimatedHours: parseFloat(document.getElementById('p_hours').value) || 0
+    };
+  }
+
+  function clearPlanForm(){
+    document.getElementById('p_title').value = '';
+    document.getElementById('p_category').value = '운동';
+    document.getElementById('p_start').value = '';
+    document.getElementById('p_end').value = '';
+    document.getElementById('p_priority').value = '중간';
+    document.getElementById('p_hours').value = 1;
+    document.getElementById('p_success').value = '';
+    editingPlanId = null;
+    document.getElementById('p_cancelEditBtn').style.display = 'none';
+    document.getElementById('p_saveBtn').textContent = '계획 저장';
+    renderCarryNote();
+  }
+
+  function renderCarryNote(){
+    var box = document.getElementById('carryNoteBox');
+    if(state.pendingCarryover){
+      box.innerHTML = '<div class="carry-note">이전 돌아보기에서 넘어온 개선점: ' + esc(state.pendingCarryover) + '<br>이 계획을 저장하면 성공 기준에 자동으로 이어붙습니다.</div>';
+    } else {
+      box.innerHTML = '';
+    }
+  }
+
+  document.getElementById('p_saveBtn').addEventListener('click', async function(){
+    var f = planFieldsFromForm();
+    if(!f.title){ showToast('제목을 입력해주세요.'); return; }
+
+    if(editingPlanId){
+      var plan = state.plans.find(function(p){ return p.id === editingPlanId; });
+      if(plan){
+        var snapshot = {
+          title: plan.title, category: plan.category, periodStart: plan.periodStart,
+          periodEnd: plan.periodEnd, priority: plan.priority, successCriteria: plan.successCriteria,
+          estimatedHours: plan.estimatedHours, savedAt: plan.updatedAt || plan.createdAt
+        };
+        plan.history.push(snapshot);
+        plan.title = f.title; plan.category = f.category; plan.periodStart = f.periodStart;
+        plan.periodEnd = f.periodEnd; plan.priority = f.priority; plan.successCriteria = f.successCriteria;
+        plan.estimatedHours = f.estimatedHours; plan.updatedAt = nowISO();
+      }
+    } else {
+      var carried = state.pendingCarryover;
+      var successText = f.successCriteria;
+      if(carried){
+        successText = successText ? (successText + '\n\n[이전 개선점] ' + carried) : ('[이전 개선점] ' + carried);
+      }
+      state.plans.push({
+        id: uid(), title: f.title, category: f.category, periodStart: f.periodStart,
+        periodEnd: f.periodEnd, priority: f.priority, successCriteria: successText,
+        estimatedHours: f.estimatedHours, createdAt: nowISO(), updatedAt: nowISO(), history: []
+      });
+      state.pendingCarryover = null;
+    }
+    await saveState();
+    clearPlanForm();
+    renderPlans();
+    refreshAllPlanSelects();
+    showToast('계획을 저장했습니다.');
+  });
+
+  document.getElementById('p_cancelEditBtn').addEventListener('click', clearPlanForm);
+
+  function startEditPlan(id){
+    var plan = state.plans.find(function(p){ return p.id === id; });
+    if(!plan) return;
+    editingPlanId = id;
+    document.getElementById('p_title').value = plan.title;
+    document.getElementById('p_category').value = plan.category;
+    document.getElementById('p_start').value = plan.periodStart || '';
+    document.getElementById('p_end').value = plan.periodEnd || '';
+    document.getElementById('p_priority').value = plan.priority;
+    document.getElementById('p_hours').value = plan.estimatedHours;
+    document.getElementById('p_success').value = plan.successCriteria;
+    document.getElementById('p_cancelEditBtn').style.display = 'inline-block';
+    document.getElementById('p_saveBtn').textContent = '수정 내용 저장';
+    document.getElementById('carryNoteBox').innerHTML = '';
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+
+  function renderPlans(){
+    var list = document.getElementById('planList');
+    if(state.plans.length === 0){
+      list.innerHTML = '<div class="empty-state">아직 세운 계획이 없습니다. 위에서 지금 실제로 하고 있는 일을 계획으로 옮겨보세요.</div>';
+      return;
+    }
+    list.innerHTML = '';
+    state.plans.slice().reverse().forEach(function(plan){
+      var todoCount = state.todos.filter(function(t){ return t.planId===plan.id && !t.deletedAt; }).length;
+      var div = document.createElement('div');
+      div.className = 'card plan-card';
+      var histHtml = '';
+      if(plan.history.length){
+        histHtml = '<details class="history"><summary>수정 이력 보기 (' + plan.history.length + '건)</summary>';
+        plan.history.slice().reverse().forEach(function(h){
+          histHtml += '<div class="history-item">' + esc(h.savedAt ? h.savedAt.slice(0,16).replace('T',' ') : '') +
+            ' — ' + esc(h.title) + ' · 우선순위 ' + esc(h.priority) + ' · 예상 ' + esc(h.estimatedHours) + 'h</div>';
+        });
+        histHtml += '</details>';
+      }
+      div.innerHTML =
+        '<div style="display:flex; justify-content:space-between; gap:8px;">' +
+          '<div>' +
+            '<span class="tag-pill">' + esc(plan.category) + '</span>' +
+            '<strong style="font-family:\'Noto Serif KR\',serif; font-size:1.05rem;">' + esc(plan.title) + '</strong>' +
+          '</div>' +
+          '<button class="link-btn" data-edit-plan="' + plan.id + '">수정</button>' +
+        '</div>' +
+        '<div class="meta-line">기간 ' + esc(plan.periodStart || '?') + ' ~ ' + esc(plan.periodEnd || '?') +
+          ' · 우선순위 ' + esc(plan.priority) + ' · 예상 ' + esc(plan.estimatedHours) + 'h · 딸린 할 일 ' + todoCount + '개</div>' +
+        (plan.successCriteria ? '<div class="meta-line">성공 기준: ' + esc(plan.successCriteria) + '</div>' : '') +
+        histHtml;
+      list.appendChild(div);
+    });
+    list.querySelectorAll('[data-edit-plan]').forEach(function(btn){
+      btn.addEventListener('click', function(){ startEditPlan(btn.dataset.editPlan); });
+    });
+  }
+
+  function refreshAllPlanSelects(){
+    [ {id:'todoPlanSelect'}, {id:'doPlanSelect'}, {id:'reviewPlanSelect'} ].forEach(function(cfg){
+      var sel = document.getElementById(cfg.id);
+      var prevVal = sel.value;
+      sel.innerHTML = '';
+      if(state.plans.length===0){
+        sel.innerHTML = '<option value="">계획 없음</option>';
+        return;
+      }
+      state.plans.forEach(function(p){
+        var opt = document.createElement('option');
+        opt.value = p.id; opt.textContent = p.title;
+        sel.appendChild(opt);
+      });
+      if(state.plans.find(function(p){return p.id===prevVal;})) sel.value = prevVal;
+    });
+  }
+
+  // ================= 할일(Todo) =================
+  var editingTodoId = null;
+
+  function currentTodoPlanId(){ return document.getElementById('todoPlanSelect').value; }
+
+  function refreshTodoPlanSelect(){
+    refreshAllPlanSelects();
+    var hasPlan = state.plans.length>0;
+    document.getElementById('todoNoPlanMsg').style.display = hasPlan ? 'none':'block';
+    document.getElementById('todoArea').style.display = hasPlan ? 'block':'none';
+    if(hasPlan){ renderTagFilterOptions(); renderTodos(); }
+  }
+  document.getElementById('todoPlanSelect').addEventListener('change', function(){
+    clearTodoForm(); renderTagFilterOptions(); renderTodos();
+  });
+
+  function clearTodoForm(){
+    document.getElementById('t_title').value='';
+    document.getElementById('t_deadline').value='';
+    document.getElementById('t_priority').value='중간';
+    document.getElementById('t_tags').value='';
+    document.getElementById('t_hours').value=1;
+    editingTodoId = null;
+    document.getElementById('t_cancelEditBtn').style.display='none';
+    document.getElementById('t_saveBtn').textContent = '할 일 저장';
+  }
+  document.getElementById('t_cancelEditBtn').addEventListener('click', clearTodoForm);
+
+  document.getElementById('t_saveBtn').addEventListener('click', async function(){
+    var planId = currentTodoPlanId();
+    if(!planId){ showToast('먼저 계획을 선택하세요.'); return; }
+    var title = document.getElementById('t_title').value.trim();
+    if(!title){ showToast('할 일 제목을 입력해주세요.'); return; }
+    var tags = document.getElementById('t_tags').value.split(',').map(function(s){return s.trim();}).filter(Boolean);
+    var f = {
+      title: title,
+      deadline: document.getElementById('t_deadline').value,
+      priority: document.getElementById('t_priority').value,
+      tags: tags,
+      estimatedHours: parseFloat(document.getElementById('t_hours').value) || 0
+    };
+    if(editingTodoId){
+      var todo = state.todos.find(function(t){ return t.id===editingTodoId; });
+      if(todo){
+        todo.title=f.title; todo.deadline=f.deadline; todo.priority=f.priority;
+        todo.tags=f.tags; todo.estimatedHours=f.estimatedHours; todo.updatedAt=nowISO();
+      }
+    } else {
+      state.todos.push({
+        id: uid(), planId: planId, title: f.title, deadline: f.deadline, priority: f.priority,
+        tags: f.tags, estimatedHours: f.estimatedHours, status: 'in_progress',
+        createdAt: nowISO(), updatedAt: nowISO(), deletedAt: null, completionLog: []
+      });
+    }
+    await saveState();
+    clearTodoForm();
+    renderTagFilterOptions();
+    renderTodos();
+    showToast('할 일을 저장했습니다.');
+  });
+
+  function startEditTodo(id){
+    var todo = state.todos.find(function(t){ return t.id===id; });
+    if(!todo) return;
+    editingTodoId = id;
+    document.getElementById('t_title').value = todo.title;
+    document.getElementById('t_deadline').value = todo.deadline || '';
+    document.getElementById('t_priority').value = todo.priority;
+    document.getElementById('t_tags').value = todo.tags.join(', ');
+    document.getElementById('t_hours').value = todo.estimatedHours;
+    document.getElementById('t_cancelEditBtn').style.display='inline-block';
+    document.getElementById('t_saveBtn').textContent = '수정 내용 저장';
+  }
+
+  async function completeTodo(id){
+    if(inFlight[id]) return; // 이중 클릭 방지
+    inFlight[id] = true;
+    try{
+      var todo = state.todos.find(function(t){ return t.id===id; });
+      if(!todo || todo.status === 'done'){ return; } // 이미 완료면 아무 것도 하지 않음
+      todo.status = 'done';
+      todo.updatedAt = nowISO();
+      todo.completionLog.push({ completedAt: nowISO() });
+      await saveState();
+      renderTodos();
+    } finally {
+      inFlight[id] = false;
+    }
+  }
+
+  async function revertTodo(id){
+    var todo = state.todos.find(function(t){ return t.id===id; });
+    if(!todo || todo.status !== 'done') return;
+    todo.status = 'in_progress';
+    todo.updatedAt = nowISO();
+    await saveState();
+    renderTodos();
+  }
+
+  var confirmingDeleteId = null; // 네이티브 confirm() 대화상자가 이 화면(iframe)에서 막혀 있어, 화면 안에서 두 번 눌러 확인하는 방식으로 대체
+
+  async function deleteTodo(id){
+    var todo = state.todos.find(function(t){ return t.id===id; });
+    if(!todo) return;
+    todo.deletedAt = nowISO();
+    confirmingDeleteId = null;
+    await saveState();
+    renderTodos();
+  }
+
+  function renderTagFilterOptions(){
+    var planId = currentTodoPlanId();
+    var tagSel = document.getElementById('t_filterTag');
+    var tags = new Set();
+    state.todos.filter(function(t){ return t.planId===planId && !t.deletedAt; }).forEach(function(t){
+      t.tags.forEach(function(tag){ tags.add(tag); });
+    });
+    var prev = tagSel.value;
+    tagSel.innerHTML = '<option value="all">전체</option>';
+    Array.from(tags).sort().forEach(function(tag){
+      var o = document.createElement('option'); o.value=tag; o.textContent=tag; tagSel.appendChild(o);
+    });
+    if(Array.from(tags).indexOf(prev)>=0) tagSel.value = prev;
+  }
+
+  var PRIORITY_RANK = { '높음':3, '중간':2, '낮음':1 };
+
+  function renderTodos(){
+    var planId = currentTodoPlanId();
+    var list = document.getElementById('todoList');
+    if(!planId){ list.innerHTML=''; return; }
+
+    var search = document.getElementById('t_search').value.trim().toLowerCase();
+    var filterStatus = document.getElementById('t_filterStatus').value;
+    var filterTag = document.getElementById('t_filterTag').value;
+    var sortMode = document.getElementById('t_sort').value;
+
+    var hints = {
+      deadline_asc: '정렬 기준: 마감일이 빠른 순 (마감일이 같으면 등록이 오래된 순)',
+      priority_desc: '정렬 기준: 우선순위 높은 순 (같으면 등록이 오래된 순)',
+      created_desc: '정렬 기준: 최근에 등록한 순'
+    };
+    document.getElementById('sortHint').textContent = hints[sortMode];
+
+    var todos = state.todos.filter(function(t){ return t.planId===planId && !t.deletedAt; });
+    if(search) todos = todos.filter(function(t){ return t.title.toLowerCase().indexOf(search)>=0; });
+    if(filterStatus!=='all') todos = todos.filter(function(t){ return t.status===filterStatus; });
+    if(filterTag!=='all') todos = todos.filter(function(t){ return t.tags.indexOf(filterTag)>=0; });
+
+    todos = todos.slice().sort(function(a,b){
+      if(sortMode==='deadline_asc'){
+        var da = a.deadline||'9999-99-99', db = b.deadline||'9999-99-99';
+        if(da!==db) return da<db?-1:1;
+        return a.createdAt<b.createdAt?-1:1;
+      }
+      if(sortMode==='priority_desc'){
+        var ra=PRIORITY_RANK[a.priority]||0, rb=PRIORITY_RANK[b.priority]||0;
+        if(ra!==rb) return rb-ra;
+        return a.createdAt<b.createdAt?-1:1;
+      }
+      // created_desc
+      return a.createdAt<b.createdAt?1:-1;
+    });
+
+    if(todos.length===0){
+      list.innerHTML = '<div class="empty-state">조건에 맞는 할 일이 없습니다.</div>';
+      return;
+    }
+
+    var today = todaySeoulStr();
+    list.innerHTML='';
+    todos.forEach(function(t){
+      var overdue = t.status!=='done' && t.deadline && t.deadline < today;
+      var cls = t.status==='done' ? 'done' : (overdue ? 'overdue' : 'open');
+      var div = document.createElement('div');
+      div.className = 'card todo-card ' + cls;
+      var tagsHtml = t.tags.map(function(tag){ return '<span class="tag-pill">'+esc(tag)+'</span>'; }).join(' ');
+      var deleteButtonsHtml = (confirmingDeleteId === t.id)
+        ? '<button class="btn brick" data-confirm-delete="'+t.id+'">정말 지웁니다</button>' +
+          '<button class="btn secondary" data-cancel-delete="'+t.id+'">취소</button>'
+        : '<button class="btn brick" data-delete-todo="'+t.id+'">지우기</button>';
+      div.innerHTML =
+        '<div style="display:flex; justify-content:space-between; gap:8px;">' +
+          '<strong>' + esc(t.title) + '</strong>' +
+          '<span class="meta-line" style="margin:0;">' + (t.status==='done' ? '완료' : (overdue ? '지연' : '진행 중')) + '</span>' +
+        '</div>' +
+        '<div class="meta-line">마감 ' + esc(t.deadline||'-') + ' · 우선순위 ' + esc(t.priority) + ' · 예상 ' + esc(t.estimatedHours) + 'h ' + tagsHtml + '</div>' +
+        '<div class="btn-row">' +
+          (t.status==='done'
+            ? '<button class="btn secondary" data-revert="'+t.id+'">진행 중으로 되돌리기</button>'
+            : '<button class="btn ochre" data-complete="'+t.id+'">완료로 표시</button>') +
+          '<button class="btn secondary" data-edit-todo="'+t.id+'">수정</button>' +
+          deleteButtonsHtml +
+        '</div>';
+      list.appendChild(div);
+    });
+    list.querySelectorAll('[data-complete]').forEach(function(b){ b.addEventListener('click', function(){ completeTodo(b.dataset.complete); }); });
+    list.querySelectorAll('[data-revert]').forEach(function(b){ b.addEventListener('click', function(){ revertTodo(b.dataset.revert); }); });
+    list.querySelectorAll('[data-edit-todo]').forEach(function(b){ b.addEventListener('click', function(){ startEditTodo(b.dataset.editTodo); }); });
+    list.querySelectorAll('[data-delete-todo]').forEach(function(b){ b.addEventListener('click', function(){ confirmingDeleteId = b.dataset.deleteTodo; renderTodos(); }); });
+    list.querySelectorAll('[data-confirm-delete]').forEach(function(b){ b.addEventListener('click', function(){ deleteTodo(b.dataset.confirmDelete); }); });
+    list.querySelectorAll('[data-cancel-delete]').forEach(function(b){ b.addEventListener('click', function(){ confirmingDeleteId = null; renderTodos(); }); });
+  }
+
+  ['t_search','t_filterStatus','t_filterTag','t_sort'].forEach(function(id){
+    document.getElementById(id).addEventListener('input', renderTodos);
+    document.getElementById(id).addEventListener('change', renderTodos);
+  });
+
+  // ================= 실제로 한 일(Do) =================
+  function refreshDoPlanSelect(){
+    refreshAllPlanSelects();
+    var planId = document.getElementById('doPlanSelect').value;
+    var todos = state.todos.filter(function(t){ return t.planId===planId && !t.deletedAt; });
+    document.getElementById('doNoTodoMsg').style.display = todos.length ? 'none':'block';
+    document.getElementById('doArea').style.display = todos.length ? 'block':'none';
+    if(todos.length){ refreshTodoSelectForDo(); renderExecutions(); }
+  }
+  document.getElementById('doPlanSelect').addEventListener('change', refreshDoPlanSelect);
+
+  function refreshTodoSelectForDo(){
+    var planId = document.getElementById('doPlanSelect').value;
+    var sel = document.getElementById('d_todoSelect');
+    var prev = sel.value;
+    sel.innerHTML='';
+    state.todos.filter(function(t){ return t.planId===planId && !t.deletedAt; }).forEach(function(t){
+      var o = document.createElement('option'); o.value=t.id; o.textContent=t.title;
+      sel.appendChild(o);
+    });
+    if(state.todos.find(function(t){return t.id===prev;})) sel.value = prev;
+  }
+
+  document.getElementById('d_saveBtn').addEventListener('click', async function(){
+    var todoId = document.getElementById('d_todoSelect').value;
+    if(!todoId){ showToast('할 일을 선택하세요.'); return; }
+    var start = document.getElementById('d_start').value;
+    var end = document.getElementById('d_end').value;
+    var hours = parseFloat(document.getElementById('d_hours').value) || 0;
+    var block = document.getElementById('d_block').value.trim();
+    state.executions.push({
+      id: uid(), todoId: todoId, startTime: start, endTime: end,
+      actualHours: hours, blockReason: block, createdAt: nowISO()
+    });
+    await saveState();
+    document.getElementById('d_block').value='';
+    renderExecutions();
+    showToast('실행 기록을 저장했습니다. (계획 값은 그대로입니다)');
+  });
+
+  function renderExecutions(){
+    var planId = document.getElementById('doPlanSelect').value;
+    var todoIds = state.todos.filter(function(t){ return t.planId===planId; }).map(function(t){return t.id;});
+    var list = document.getElementById('execList');
+    var execs = state.executions.filter(function(e){ return todoIds.indexOf(e.todoId)>=0; })
+      .slice().sort(function(a,b){ return a.createdAt<b.createdAt?1:-1; });
+    if(execs.length===0){ list.innerHTML = '<div class="empty-state">아직 실행 기록이 없습니다.</div>'; return; }
+    list.innerHTML='';
+    execs.forEach(function(e){
+      var todo = state.todos.find(function(t){return t.id===e.todoId;});
+      var div = document.createElement('div');
+      div.className = 'card';
+      div.innerHTML =
+        '<strong>' + esc(todo ? todo.title : '(지워진 할 일)') + '</strong>' +
+        '<div class="meta-line">' + esc(e.startTime||'-') + ' ~ ' + esc(e.endTime||'-') + ' · 실제 ' + esc(e.actualHours) + 'h</div>' +
+        (e.blockReason ? '<div class="meta-line">막힘: ' + esc(e.blockReason) + '</div>' : '');
+      list.appendChild(div);
+    });
+  }
+
+  // ================= 돌아보기(See) =================
+  var currentDrill = null;
+
+  function refreshReviewPlanSelect(){
+    refreshAllPlanSelects();
+    var hasPlan = state.plans.length>0;
+    document.getElementById('reviewNoPlanMsg').style.display = hasPlan?'none':'block';
+    document.getElementById('reviewArea').style.display = hasPlan?'block':'none';
+    if(hasPlan) renderReview();
+  }
+  document.getElementById('reviewPlanSelect').addEventListener('change', function(){
+    currentDrill = null;
+    renderReview();
+  });
+
+  function reviewData(planId){
+    var todos = state.todos.filter(function(t){ return t.planId===planId && !t.deletedAt; });
+    var todoIds = todos.map(function(t){return t.id;});
+    var execs = state.executions.filter(function(e){ return todoIds.indexOf(e.todoId)>=0; });
+    var today = todaySeoulStr();
+
+    var done = todos.filter(function(t){ return t.status==='done'; });
+    var overdue = todos.filter(function(t){ return t.status!=='done' && t.deadline && t.deadline<today; });
+    var blockedTodoIds = new Set(execs.filter(function(e){ return e.blockReason && e.blockReason.trim(); }).map(function(e){return e.todoId;}));
+    var blocked = todos.filter(function(t){ return blockedTodoIds.has(t.id); });
+
+    var estTotal = todos.reduce(function(s,t){ return s + (t.estimatedHours||0); }, 0);
+    var actTotal = execs.reduce(function(s,e){ return s + (e.actualHours||0); }, 0);
+
+    return { todos:todos, done:done, overdue:overdue, blocked:blocked, execs:execs, estTotal:estTotal, actTotal:actTotal };
+  }
+
+  function renderReview(){
+    var planId = document.getElementById('reviewPlanSelect').value;
+    if(!planId) return;
+    var d = reviewData(planId);
+
+    document.querySelector('#kpi_plan .num').textContent = d.todos.length;
+    document.querySelector('#kpi_done .num').textContent = d.done.length;
+    document.querySelector('#kpi_overdue .num').textContent = d.overdue.length;
+    document.querySelector('#kpi_blocked .num').textContent = d.blocked.length;
+    document.getElementById('time_est').textContent = d.estTotal.toFixed(2);
+    document.getElementById('time_act').textContent = d.actTotal.toFixed(2);
+    document.getElementById('time_diff').textContent = (d.actTotal - d.estTotal).toFixed(2);
+
+    var note = state.reviewNotes[planId];
+    document.getElementById('see_note').value = note || '';
+    document.getElementById('see_noteStatus').textContent = state.pendingCarryover && state.pendingCarryover === note
+      ? '다음 계획에 아직 반영되지 않았습니다.' : (note ? '저장된 개선점이 있습니다.' : '');
+
+    if(currentDrill && currentDrill.planId === planId){
+      renderDrill(currentDrill.kind, d);
+    } else {
+      document.getElementById('drillPanel').style.display = 'none';
+    }
+  }
+
+  function renderDrill(kind, d){
+    var panel = document.getElementById('drillPanel');
+    var rows = [];
+    var title = '';
+    if(kind==='plan'){ title = '이 계획에 딸린 할 일 (' + d.todos.length + '건)'; rows = d.todos.map(function(t){ return esc(t.title) + ' · ' + (t.status==='done'?'완료':'진행 중'); }); }
+    if(kind==='done'){ title = '완료한 할 일 (' + d.done.length + '건)'; rows = d.done.map(function(t){ return esc(t.title) + (t.completionLog.length? ' · 완료 ' + t.completionLog[t.completionLog.length-1].completedAt.slice(0,16).replace('T',' ') : ''); }); }
+    if(kind==='overdue'){ title = '지연된 할 일 (' + d.overdue.length + '건)'; rows = d.overdue.map(function(t){ return esc(t.title) + ' · 마감 ' + esc(t.deadline); }); }
+    if(kind==='blocked'){ title = '막혔던 할 일 (' + d.blocked.length + '건)'; rows = d.blocked.map(function(t){
+        var reasons = d.execs.filter(function(e){return e.todoId===t.id && e.blockReason;}).map(function(e){return e.blockReason;});
+        return esc(t.title) + ' · ' + esc(reasons.join(', '));
+      }); }
+    panel.style.display = 'block';
+    panel.innerHTML = '<h4>' + title + '</h4>' +
+      (rows.length ? rows.map(function(r){ return '<div class="drill-row">'+r+'</div>'; }).join('') : '<div class="drill-row">해당 기록이 없습니다.</div>') +
+      '<div style="margin-top:8px;"><button class="link-btn" id="drillClose">닫기</button></div>';
+    document.getElementById('drillClose').addEventListener('click', function(){ currentDrill=null; document.getElementById('drillPanel').style.display='none'; });
+  }
+
+  ['plan','done','overdue','blocked'].forEach(function(kind){
+    document.getElementById('kpi_'+kind).addEventListener('click', function(){
+      var planId = document.getElementById('reviewPlanSelect').value;
+      currentDrill = { planId: planId, kind: kind };
+      renderReview();
+    });
+  });
+
+  document.getElementById('see_saveNoteBtn').addEventListener('click', async function(){
+    var planId = document.getElementById('reviewPlanSelect').value;
+    var note = document.getElementById('see_note').value.trim();
+    if(!note){ showToast('넘길 내용을 적어주세요.'); return; }
+    state.reviewNotes[planId] = note;
+    state.pendingCarryover = note;
+    await saveState();
+    document.getElementById('see_noteStatus').textContent = '다음에 [계획] 탭에서 새 계획을 만들면 자동으로 이어붙습니다.';
+    showToast('다음 계획으로 넘길 준비가 되었습니다.');
+  });
+
+  // ================= 내보내기 =================
+  document.getElementById('exportBtn').addEventListener('click', async function(){
+    var blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    var filename = 'plandoc-diary-export-' + todaySeoulStr() + '.json';
+
+    if(storageMode === 'db'){
+      if(!downloadsRef) downloadsRef = await getCapability("downloads");
+      if(downloadsRef){
+        try{
+          await downloadsRef.save({ filename: filename, data: blob });
+          showToast('내보내기 파일을 내려받았습니다.');
+          return;
+        }catch(e){ /* 실패하면 아래 일반 다운로드 방식으로 시도 */ }
+      }
+    }
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('내보내기 파일을 내려받았습니다.');
+  });
+
+  // ================= 초기화 =================
+  async function init(){
+    await loadState();
+    document.getElementById('loadingMsg').style.display = 'none';
+    document.getElementById('storageModeText').textContent =
+      storageMode === 'db'
+        ? '이 화면은 서버 저장소에 저장되며, 새로고침해도 값이 남습니다.'
+        : '지금은 서버 저장소에 연결되지 않아 아무 것도 저장되지 않습니다. Claude가 게시한 링크로 열어주세요.';
+    renderPlans();
+    refreshAllPlanSelects();
+    renderCarryNote();
+    refreshTodoPlanSelect();
+    refreshDoPlanSelect();
+    refreshReviewPlanSelect();
+    switchTab(lastTabOrDefault()); // 마지막으로 보던 탭으로 복원 (없으면 계획 탭)
+  }
+  init();
+
+})();
+</script>
+</body>
+</html>
