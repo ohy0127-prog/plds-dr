@@ -198,6 +198,19 @@
   footer.appfoot{
     max-width:820px; margin:0 auto; padding:0 20px 30px 20px; color:var(--ink-soft); font-size:0.78rem;
   }
+
+  /* ---- 과제 7: 로그인 / 계정 ---- */
+  .hidden{display:none !important;}
+  #authView{max-width:420px; margin:40px auto; padding:0 20px;}
+  .auth-msg{font-size:0.85rem; margin-top:10px; min-height:1.2em; color:var(--overdue-brick);}
+  .auth-msg.ok{color:var(--plan-blue);}
+  .account-bar{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+  .account-bar .who{flex:1; min-width:160px;}
+  .account-bar button{
+    background:none; border:1px solid #A9AEA2; color:#EDE7D6; border-radius:var(--radius);
+    padding:4px 10px; font-family:inherit; font-size:0.8rem; cursor:pointer;
+  }
+  details.account-details summary{cursor:pointer; color:var(--plan-blue); font-size:0.85rem;}
 </style>
 </head>
 <body>
@@ -205,9 +218,12 @@
 <header class="top">
   <h1>플랜두씨 다이어리</h1>
   <div class="tagline">계획(Plan) → 실제로 한 일(Do) → 돌아보기(See)가 이어지는 나만의 기록장</div>
-  <div class="notice">지금은 로그인이 없어 링크를 아는 사람은 누구나 볼 수 있습니다. 남이 봐도 괜찮은 내용만 넣으세요.</div>
+  <div id="accountBar" class="notice account-bar hidden">
+    <span class="who">로그인: <b id="accountEmail"></b> · 이 기록은 내 계정에서만 보입니다.</span>
+    <button id="logoutBtn">로그아웃</button>
+  </div>
   <div id="dbWarning" class="notice" style="display:none; border-left-color:var(--overdue-brick); background:#4A2A22;">지금 서버 데이터베이스(Firestore)에 연결할 수 없습니다. 아무 것도 저장되지 않습니다. 인터넷 연결과 보안 규칙을 확인해주세요.</div>
-  <nav class="tabs">
+  <nav class="tabs hidden" id="mainTabs">
     <button data-tab="plan" class="active">계획</button>
     <button data-tab="todo">할 일</button>
     <button data-tab="do">실제로 한 일</button>
@@ -215,9 +231,27 @@
   </nav>
 </header>
 
-<main>
+<div id="bootMsg" class="loading" style="max-width:820px; margin:20px auto; padding:0 20px;">불러오는 중…</div>
 
-  <div id="loadingMsg" class="loading">불러오는 중…</div>
+<!-- ===================== 로그인 / 가입 (첫 화면) ===================== -->
+<section id="authView" class="hidden">
+  <div class="card">
+    <h2 class="section-title" id="authTitle">로그인</h2>
+    <p class="section-sub" id="authSub">내 기록은 로그인한 뒤에만 보입니다.</p>
+    <label for="a_email">이메일</label>
+    <input id="a_email" type="email" autocomplete="username" placeholder="you@example.com">
+    <label for="a_password">비밀번호</label>
+    <input id="a_password" type="password" autocomplete="current-password">
+    <div class="btn-row">
+      <button class="btn" id="a_submit">로그인</button>
+      <button class="btn secondary" id="a_toggle">처음이신가요? 가입하기</button>
+    </div>
+    <div id="a_msg" class="auth-msg" role="alert"></div>
+  </div>
+</section>
+
+<div id="appShell" class="hidden">
+<main>
 
   <!-- ===================== 계획 ===================== -->
   <section id="view-plan" class="view active">
@@ -446,12 +480,36 @@
 <footer class="appfoot">
   <button class="btn secondary" id="exportBtn">내 자료 전체 내보내기(JSON)</button>
   <span id="storageModeText" style="margin-left:10px;">저장 위치 확인 중…</span>
+
+  <details class="account-details" style="margin-top:16px;">
+    <summary>계정 관리 (비밀번호 변경 · 계정 삭제)</summary>
+    <div class="card" style="margin-top:10px;">
+      <strong>비밀번호 변경</strong>
+      <label for="pw_current">현재 비밀번호</label>
+      <input id="pw_current" type="password" autocomplete="current-password">
+      <label for="pw_new">새 비밀번호 (8자 이상)</label>
+      <input id="pw_new" type="password" autocomplete="new-password">
+      <div class="btn-row"><button class="btn" id="pw_changeBtn">비밀번호 바꾸기</button></div>
+      <div class="meta-line">바꾸면 이전에 발급된 로그인 값이 더는 통하지 않아 다시 로그인해야 합니다.</div>
+      <div id="pw_msg" class="auth-msg" role="alert"></div>
+    </div>
+    <div class="card">
+      <strong>계정 삭제</strong>
+      <div class="meta-line">계정을 지우면 내 자료(계획·할 일·실행 기록)도 함께 지워지고, 되돌릴 수 없습니다.</div>
+      <label for="del_password">비밀번호 확인</label>
+      <input id="del_password" type="password" autocomplete="current-password">
+      <div class="btn-row"><button class="btn brick" id="del_btn">계정 삭제</button></div>
+      <div id="del_msg" class="auth-msg" role="alert"></div>
+    </div>
+  </details>
 </footer>
+</div><!-- /appShell -->
 
 <div id="toast" class="toast"></div>
 
 <!-- Firebase (실제 서버 데이터베이스: Firestore) -->
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 
 <script>
@@ -460,7 +518,9 @@
 
   // ---------- 상태 ----------
   var state = null;
-  var firestoreDoc = null;  // Firestore 문서 참조. 이게 없으면 저장하지 않는다(브라우저 저장소로 대신하지 않음).
+  var firestoreDoc = null;  // 로그인한 사람의 Firestore 문서 참조(users/{uid}/data/state). 이게 없으면 저장하지 않는다.
+  var auth = null, db = null, currentUser = null;
+  var appEntered = false, migratedFromT06 = false;
   var storageMode = 'unavailable'; // 'db' 또는 'unavailable'
   var inFlight = {}; // 완료 버튼 이중클릭 방지용
 
@@ -472,16 +532,6 @@
     messagingSenderId: "165990395383",
     appId: "1:165990395383:web:42d89f2df364dc613312f2"
   };
-
-  function defaultState(){
-    // 이전에 내보내신 자료(2026-09-16)를 처음 한 번만 채워 넣는 기본값.
-    // 이후 저장된 값이 있으면 이 값 대신 그 저장된 값을 불러온다.
-    return {"executions":[{"actualHours":0.2,"blockReason":"","createdAt":"2026-09-16T07:23:23.571Z","endTime":"2026-09-16T14:40","id":"32b491ff-f1fe-46a2-af94-6cb17b7eb906","startTime":"2026-09-16T14:30","todoId":"1a4b0e95-a867-4d12-82c3-c2ec6db4ef45"},{"actualHours":0.2,"blockReason":"","createdAt":"2026-09-16T07:24:13.758Z","endTime":"2026-09-16T16:23","id":"2d488b36-0596-4552-8474-a928b01cc16c","startTime":"2026-09-16T16:10","todoId":"def702d5-e785-462f-9248-e59dcff12f57"},{"actualHours":0.2,"blockReason":"","createdAt":"2026-09-16T07:24:35.596Z","endTime":"2026-09-16T16:23","id":"b73d546e-2196-4c1d-bdb1-a894df1a4853","startTime":"2026-09-16T16:10","todoId":"0241f892-863a-4332-aa92-a941bbe77cea"}],
-    "pendingCarryover":"과제 진행에 차질이 없도록 계획 잘 세우기",
-    "plans":[{"category":"공부","createdAt":"2026-09-16T07:17:56.543Z","estimatedHours":120,"history":[],"id":"ed31b442-d550-4421-8468-ecbbd68b69f0","periodEnd":"2026-12-31","periodStart":"2026-09-16","priority":"중간","successCriteria":"필기, 실기 합격","title":"자격증 취득","updatedAt":"2026-09-16T07:17:56.543Z"},{"category":"ALEPH 진행","createdAt":"2026-09-16T07:18:38.832Z","estimatedHours":75,"history":[],"id":"a514a119-c378-4512-82dd-a506dc62ab4f","periodEnd":"2026-10-16","periodStart":"2026-08-17","priority":"중간","successCriteria":"과제 제출 및 승인완료","title":"ALEPH 과제","updatedAt":"2026-09-16T07:18:38.832Z"}],
-    "reviewNotes":{"a514a119-c378-4512-82dd-a506dc62ab4f":"과제 진행에 차질이 없도록 계획 잘 세우기"},
-    "todos":[{"completionLog":[{"completedAt":"2026-09-16T07:24:54.739Z"}],"createdAt":"2026-09-16T07:19:27.455Z","deadline":"2026-09-16","deletedAt":null,"estimatedHours":0.5,"id":"1a4b0e95-a867-4d12-82c3-c2ec6db4ef45","planId":"a514a119-c378-4512-82dd-a506dc62ab4f","priority":"중간","status":"done","tags":["과제"],"title":"과제6 - 플랜두씨 다이어리 생성","updatedAt":"2026-09-16T07:24:54.739Z"},{"completionLog":[{"completedAt":"2026-09-16T07:24:55.664Z"}],"createdAt":"2026-09-16T07:20:01.185Z","deadline":"2026-09-16","deletedAt":null,"estimatedHours":0.3,"id":"def702d5-e785-462f-9248-e59dcff12f57","planId":"a514a119-c378-4512-82dd-a506dc62ab4f","priority":"중간","status":"done","tags":["과제"],"title":"과제6 - 플랜두씨 계획 세우기","updatedAt":"2026-09-16T07:24:55.664Z"},{"completionLog":[{"completedAt":"2026-09-16T07:24:57.460Z"}],"createdAt":"2026-09-16T07:20:27.399Z","deadline":"2026-09-16","deletedAt":null,"estimatedHours":0.2,"id":"0241f892-863a-4332-aa92-a941bbe77cea","planId":"a514a119-c378-4512-82dd-a506dc62ab4f","priority":"중간","status":"done","tags":["과제"],"title":"과제6 - 다이어리 할 일 채우기","updatedAt":"2026-09-16T07:24:57.460Z"},{"completionLog":[],"createdAt":"2026-09-16T07:21:05.276Z","deadline":"2026-09-16","deletedAt":null,"estimatedHours":0.1,"id":"d0769c5f-01a6-46e2-9c5f-d093a0584f06","planId":"a514a119-c378-4512-82dd-a506dc62ab4f","priority":"중간","status":"in_progress","tags":["과제"],"title":"과제6 - 할 일 완료하기","updatedAt":"2026-09-16T07:21:05.276Z"},{"completionLog":[],"createdAt":"2026-09-16T07:21:59.093Z","deadline":"2026-09-13","deletedAt":null,"estimatedHours":7,"id":"abe12dca-9007-445f-ba7f-03f75ab68ad4","planId":"a514a119-c378-4512-82dd-a506dc62ab4f","priority":"중간","status":"in_progress","tags":["과제"],"title":"과제4","updatedAt":"2026-09-16T07:21:59.093Z"}]};
-  }
 
   function uid(){
     if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
@@ -505,32 +555,47 @@
     return s;
   }
 
-  async function loadState(){
-    // 서버 저장소(Firestore)만 쓴다. 연결이 안 되면 저장하지 않고 화면에도 그렇게 밝힌다.
+  function emptyState(){ return ensureShape({}); }
+
+  // ---------- Firebase 준비 ----------
+  function initFirebase(){
     try{
       firebase.initializeApp(firebaseConfig);
-      firestoreDoc = firebase.firestore().collection('app').doc('state');
+      auth = firebase.auth();
+      db = firebase.firestore();
+      return true;
     }catch(e){
-      firestoreDoc = null;
+      return false;
     }
-    if(!firestoreDoc){
-      state = defaultState();
-      storageMode = 'unavailable';
-      document.getElementById('dbWarning').style.display = 'block';
-      return;
-    }
+  }
+
+  // 자료는 사람별 경로에만 둔다: users/{uid}/data/state. 남의 uid 경로는 보안 규칙(firestore.rules)이 거절한다.
+  function userDocRef(u){ return db.collection('users').doc(u).collection('data').doc('state'); }
+  // 로그아웃·비밀번호 변경 시각. 보안 규칙이 이 시각 이전에 발급된 토큰을 거절한다.
+  function sessionDocRef(u){ return db.collection('users').doc(u).collection('session').doc('meta'); }
+
+  async function loadState(user){
+    // 서버 저장소(Firestore)만 쓴다. 연결이 안 되면 저장하지 않고 화면에도 그렇게 밝힌다.
+    firestoreDoc = userDocRef(user.uid);
+    migratedFromT06 = false;
     try{
       var snap = await firestoreDoc.get();
       if(snap.exists){
         state = ensureShape(snap.data());
       } else {
-        state = defaultState();
-        await firestoreDoc.set(state); // 처음 한 번, 시작값을 서버에 심어 둔다
+        // 이 계정의 첫 로그인. 과제 6에서 쓰던 문서(app/state)를 읽을 권한이 있는 계정이면 한 번만 옮겨 온다.
+        // 권한이 없는 계정은 읽기가 거절되고, 빈 상태로 시작한다.
+        state = emptyState();
+        try{
+          var legacy = await db.collection('app').doc('state').get();
+          if(legacy.exists){ state = ensureShape(legacy.data()); migratedFromT06 = true; }
+        }catch(e){ /* 과제 6 자료를 읽을 수 없는 계정: 빈 상태로 시작 */ }
+        await firestoreDoc.set(state);
       }
       storageMode = 'db';
     }catch(e){
       firestoreDoc = null;
-      state = defaultState();
+      state = emptyState();
       storageMode = 'unavailable';
       document.getElementById('dbWarning').style.display = 'block';
     }
@@ -1119,13 +1184,178 @@
     showToast('내보내기 파일을 내려받았습니다.');
   });
 
-  // ================= 초기화 =================
-  async function init(){
-    await loadState();
-    document.getElementById('loadingMsg').style.display = 'none';
+  // ================= 로그인 / 가입 / 로그아웃 =================
+  var authMode = 'login'; // 'login' | 'signup'
+  var authBusy = false;
+  var FLASH_KEY = 'plandoc-diary-flash';
+
+  function setMsg(id, text, ok){
+    var el = document.getElementById(id);
+    el.textContent = text || '';
+    el.className = 'auth-msg' + (ok ? ' ok' : '');
+  }
+
+  function flashAfterReload(text){
+    try{ sessionStorage.setItem(FLASH_KEY, text); }catch(e){ /* 안내문을 못 남길 뿐 */ }
+  }
+
+  function takeFlash(){
+    try{
+      var v = sessionStorage.getItem(FLASH_KEY);
+      if(v){ sessionStorage.removeItem(FLASH_KEY); return v; }
+    }catch(e){ /* 무시 */ }
+    return '';
+  }
+
+  // 로그인 실패 문구는 "없는 이메일"과 "틀린 비밀번호"를 구별하지 않고 하나로 통일한다.
+  var GENERIC_LOGIN_ERROR = '이메일 또는 비밀번호가 올바르지 않습니다.';
+
+  function authErrorMessage(err, mode){
+    var c = err && err.code;
+    if(c === 'auth/network-request-failed') return '네트워크에 연결할 수 없습니다.';
+    if(c === 'auth/too-many-requests') return '시도가 너무 많습니다. 잠시 뒤에 다시 해 주세요.';
+    if(c === 'auth/invalid-email') return '이메일 형식을 확인해 주세요.';
+    if(mode === 'login') return GENERIC_LOGIN_ERROR;
+    if(c === 'auth/email-already-in-use') return '이미 가입된 이메일입니다.';
+    if(c === 'auth/weak-password') return '비밀번호는 8자 이상으로 해 주세요.';
+    return '가입하지 못했습니다. 잠시 뒤에 다시 해 주세요.';
+  }
+
+  function setAuthMode(mode){
+    authMode = mode;
+    var signup = (mode === 'signup');
+    document.getElementById('authTitle').textContent = signup ? '가입하기' : '로그인';
+    document.getElementById('authSub').textContent = signup
+      ? '이메일과 비밀번호(8자 이상)로 내 계정을 만듭니다.'
+      : '내 기록은 로그인한 뒤에만 보입니다.';
+    document.getElementById('a_submit').textContent = signup ? '가입하기' : '로그인';
+    document.getElementById('a_toggle').textContent = signup ? '이미 계정이 있어요. 로그인' : '처음이신가요? 가입하기';
+    document.getElementById('a_password').autocomplete = signup ? 'new-password' : 'current-password';
+    setMsg('a_msg', '');
+  }
+
+  async function submitAuth(){
+    if(authBusy || !auth) return;
+    var email = document.getElementById('a_email').value.trim();
+    var pw = document.getElementById('a_password').value;
+    if(!email || !pw){ setMsg('a_msg', '이메일과 비밀번호를 입력해 주세요.'); return; }
+    if(authMode === 'signup' && pw.length < 8){ setMsg('a_msg', '비밀번호는 8자 이상으로 해 주세요.'); return; }
+    authBusy = true;
+    document.getElementById('a_submit').disabled = true;
+    setMsg('a_msg', '');
+    try{
+      if(authMode === 'login') await auth.signInWithEmailAndPassword(email, pw);
+      else await auth.createUserWithEmailAndPassword(email, pw);
+      document.getElementById('a_password').value = '';
+    }catch(e){
+      setMsg('a_msg', authErrorMessage(e, authMode));
+    }finally{
+      authBusy = false;
+      document.getElementById('a_submit').disabled = false;
+    }
+  }
+
+  document.getElementById('a_submit').addEventListener('click', submitAuth);
+  document.getElementById('a_toggle').addEventListener('click', function(){
+    setAuthMode(authMode === 'login' ? 'signup' : 'login');
+  });
+  ['a_email','a_password'].forEach(function(id){
+    document.getElementById(id).addEventListener('keydown', function(ev){
+      if(ev.key === 'Enter') submitAuth();
+    });
+  });
+
+  // "이 시각 이전에 발급된 로그인 값은 더는 통하지 않는다"를 서버(Firestore)에 기록한다.
+  // 서버 규칙이 이 시각과 토큰 발급 시각을 비교해, 로그아웃 뒤 예전 값으로 온 요청을 거절한다.
+  async function revokeSessions(){
+    if(!currentUser) return;
+    await sessionDocRef(currentUser.uid).set({ revokedAt: firebase.firestore.FieldValue.serverTimestamp() });
+  }
+
+  function delay(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+
+  document.getElementById('logoutBtn').addEventListener('click', async function(){
+    var revoked = true;
+    try{ await revokeSessions(); }catch(e){ revoked = false; }
+    if(!revoked){
+      showToast('서버에 로그아웃 기록을 남기지 못했습니다. 이전 로그인 값이 잠시 남을 수 있습니다.');
+      await delay(1800);
+    }
+    await auth.signOut(); // 아래 onUser(null)이 화면을 새로 불러 메모리의 자료를 지운다
+  });
+
+  document.getElementById('pw_changeBtn').addEventListener('click', async function(){
+    var cur = document.getElementById('pw_current').value;
+    var nw = document.getElementById('pw_new').value;
+    if(!cur || !nw){ setMsg('pw_msg', '현재 비밀번호와 새 비밀번호를 모두 입력해 주세요.'); return; }
+    if(nw.length < 8){ setMsg('pw_msg', '새 비밀번호는 8자 이상으로 해 주세요.'); return; }
+    try{
+      var cred = firebase.auth.EmailAuthProvider.credential(currentUser.email, cur);
+      await currentUser.reauthenticateWithCredential(cred);
+      await currentUser.updatePassword(nw);
+      try{ await revokeSessions(); }catch(e){ /* 기록 실패해도 아래에서 로그아웃 */ }
+      flashAfterReload('비밀번호를 바꿨습니다. 새 비밀번호로 다시 로그인해 주세요.');
+      await auth.signOut();
+    }catch(e){
+      var c = e && e.code;
+      if(c === 'auth/weak-password') setMsg('pw_msg', '새 비밀번호는 8자 이상으로 해 주세요.');
+      else if(c === 'auth/network-request-failed') setMsg('pw_msg', '네트워크에 연결할 수 없습니다.');
+      else setMsg('pw_msg', '비밀번호를 바꾸지 못했습니다. 현재 비밀번호를 확인해 주세요.');
+    }
+  });
+
+  var deleteArmed = false;
+  document.getElementById('del_btn').addEventListener('click', async function(){
+    var btn = this;
+    var pw = document.getElementById('del_password').value;
+    if(!pw){ setMsg('del_msg', '비밀번호를 입력해 주세요.'); return; }
+    if(!deleteArmed){
+      deleteArmed = true;
+      btn.textContent = '정말 지웁니다';
+      setMsg('del_msg', '한 번 더 누르면 내 계정과 내 자료가 모두 지워집니다.');
+      return;
+    }
+    try{
+      var cred = firebase.auth.EmailAuthProvider.credential(currentUser.email, pw);
+      await currentUser.reauthenticateWithCredential(cred);
+      var u = currentUser.uid;
+      await userDocRef(u).delete();      // 내 자료
+      await sessionDocRef(u).delete();   // 로그아웃 기록
+      flashAfterReload('계정과 내 자료를 지웠습니다.');
+      await currentUser.delete();        // 계정. 끝나면 onUser(null)이 화면을 새로 불러온다
+    }catch(e){
+      deleteArmed = false;
+      btn.textContent = '계정 삭제';
+      setMsg('del_msg', '계정을 지우지 못했습니다. 비밀번호를 확인해 주세요.');
+    }
+  });
+
+  // ================= 화면 전환 / 시작 =================
+  function showAuthView(){
+    document.getElementById('bootMsg').classList.add('hidden');
+    document.getElementById('appShell').classList.add('hidden');
+    document.getElementById('mainTabs').classList.add('hidden');
+    document.getElementById('accountBar').classList.add('hidden');
+    document.getElementById('authView').classList.remove('hidden');
+    setAuthMode('login');
+    var flash = takeFlash();
+    if(flash) setMsg('a_msg', flash, true);
+  }
+
+  async function enterApp(user){
+    document.getElementById('authView').classList.add('hidden');
+    document.getElementById('bootMsg').classList.remove('hidden');
+    await loadState(user);
+    if(!auth.currentUser || auth.currentUser.uid !== user.uid) return; // 불러오는 사이 로그아웃됨
+    appEntered = true;
+    document.getElementById('bootMsg').classList.add('hidden');
+    document.getElementById('appShell').classList.remove('hidden');
+    document.getElementById('mainTabs').classList.remove('hidden');
+    document.getElementById('accountBar').classList.remove('hidden');
+    document.getElementById('accountEmail').textContent = user.email || '';
     document.getElementById('storageModeText').textContent =
       storageMode === 'db'
-        ? '이 화면은 서버 데이터베이스(Firestore)에 저장되며, 새로고침해도 값이 남습니다.'
+        ? '이 화면은 내 계정의 서버 저장소(Firestore)에 저장되며, 새로고침해도 값이 남습니다.'
         : '지금은 서버 데이터베이스에 연결되지 않아 아무 것도 저장되지 않습니다.';
     renderPlans();
     refreshAllPlanSelects();
@@ -1134,8 +1364,30 @@
     refreshDoPlanSelect();
     refreshReviewPlanSelect();
     switchTab(lastTabOrDefault()); // 마지막으로 보던 탭으로 복원 (없으면 계획 탭)
+    if(migratedFromT06) showToast('과제 6에서 쓰던 자료를 내 계정으로 옮겼습니다.');
   }
-  init();
+
+  function onUser(user){
+    if(!user){
+      currentUser = null;
+      if(appEntered){ window.location.reload(); return; } // 메모리에 남은 자료·입력값을 지운다
+      showAuthView();
+      return;
+    }
+    currentUser = user;
+    enterApp(user);
+  }
+
+  function start(){
+    if(!initFirebase()){
+      showAuthView();
+      document.getElementById('dbWarning').style.display = 'block';
+      document.getElementById('a_submit').disabled = true;
+      return;
+    }
+    auth.onAuthStateChanged(onUser);
+  }
+  start();
 
 })();
 </script>
