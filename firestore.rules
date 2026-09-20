@@ -1,0 +1,51 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- 도우미 ----------
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // 요청한 사람(uid)이 경로의 주인({uid})과 같은가
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function sessionMetaPath(uid) {
+      return /databases/$(database)/documents/users/$(uid)/session/meta;
+    }
+
+    // 로그아웃·비밀번호 변경 시각(revokedAt) 이후에 발급된 토큰만 통과시킨다.
+    // iat는 토큰 발급 시각(초). 같은 초 안의 재로그인이 막히지 않도록 999ms 여유를 둔다.
+    function notRevoked(uid) {
+      return !exists(sessionMetaPath(uid))
+        || request.auth.token.iat * 1000 + 999 >= get(sessionMetaPath(uid)).data.revokedAt.toMillis();
+    }
+
+    // ---------- 내 자료: users/{uid}/data/* ----------
+    match /users/{uid}/data/{docId} {
+      allow read, write: if isOwner(uid) && notRevoked(uid);
+    }
+
+    // ---------- 로그아웃 기록: users/{uid}/session/meta ----------
+    match /users/{uid}/session/meta {
+      allow read: if isOwner(uid) && notRevoked(uid);
+      allow create, update: if isOwner(uid) && notRevoked(uid)
+        && request.resource.data.keys().hasOnly(['revokedAt'])
+        && request.resource.data.revokedAt == request.time;
+      allow delete: if isOwner(uid) && notRevoked(uid);
+    }
+
+    // ---------- 과제 6 자료(app/state): 계정으로 옮긴 뒤 읽기·쓰기 모두 닫음 ----------
+    match /app/state {
+      allow read: if false;
+      allow write: if false;
+    }
+
+    // 나머지는 모두 거절
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
