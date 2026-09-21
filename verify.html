@@ -38,7 +38,7 @@
   </fieldset>
 
   <p class="note">실행하면 두 계정에 검증용 임시 문서(<code>data/probe</code>, <code>data/spoof</code>)를 만들었다가 지웁니다.
-  계정 A는 앱의 로그아웃과 같은 순서로 로그아웃됩니다. 실제 계획·할 일 문서(<code>data/state</code>)는 수정·삭제하지 않습니다.</p>
+  계정 A는 앱의 로그아웃과 같은 순서로 로그아웃되고, 계정 B는 비밀번호가 잠깐 "원래 비밀번호 + !t7"로 바뀌었다가 원래대로 돌아옵니다. 실제 계획·할 일 문서(<code>data/state</code>)는 수정·삭제하지 않습니다.</p>
 
   <button id="run">검증 실행</button>
   <button id="copy" class="secondary">결과 복사</button>
@@ -85,7 +85,8 @@
 
   function summarize(r){
     if(r.status === 0) return r.text;
-    if(r.json && r.json.error) return r.status + ' ' + (r.json.error.status || '') + ' — ' + (r.json.error.message || '');
+    var je = r.json && (r.json.error || (Array.isArray(r.json) && r.json[0] && r.json[0].error));
+    if(je) return r.status + ' ' + (je.status || '') + ' — ' + (je.message || '');
     if(r.json && r.json.documents){
       return r.status + ' OK — 문서 ' + r.json.documents.length + '건: ' +
         r.json.documents.map(function(d){ return d.name.split('/').pop(); }).join(', ');
@@ -247,13 +248,19 @@
 
       log('\n── ④ 주소·헤더·본문에 다른 계정을 적어 보내기 (A가 B인 척) ──');
       log('  (주소에 B의 계정을 적은 요청은 ②의 A → B 요청과 같습니다: 모두 거절)');
-      var h = await req('헤더에 B의 계정을 적고 A의 자료 요청', 'GET', '/users/' + uA + '/data/state', tA, { headers: { 'X-Owner-Uid': uB } });
+      var h = await req('헤더(X-Owner-Uid)에 B의 계정을 적고 A의 자료 요청', 'GET', '/users/' + uA + '/data/state', tA, { headers: { 'X-Owner-Uid': uB } });
+      var hHeader = 'X-Owner-Uid';
       if(h.status === 0){
-        warn('브라우저가 사용자 지정 헤더를 막아 서버까지 가지 못했습니다. 이 항목은 증거로 쓰지 말고 curl로 다시 확인하세요.');
+        log('  ℹ 브라우저 보안 정책(CORS)이 사용자 지정 헤더 X-Owner-Uid를 막아 서버까지 가지 못했습니다. 브라우저가 허용하는 헤더(Accept-Language)에 B의 계정을 적어 대신 확인합니다.');
+        hHeader = 'Accept-Language';
+        h = await req('헤더(Accept-Language)에 B의 계정을 적고 A의 자료 요청', 'GET', '/users/' + uA + '/data/state', tA, { headers: { 'Accept-Language': uB } });
+      }
+      if(h.status === 0){
+        warn('헤더 시험이 브라우저에서 모두 막혔습니다. 이 항목은 증거로 쓰지 말고 curl로 다시 확인하세요.');
       }else{
         var hl = leaked(h.text, idsB);
         check(h.status === 200 && h.json && h.json.name && h.json.name.indexOf('/users/' + uA + '/') >= 0 && hl.length === 0,
-          '헤더에 B를 적어도 돌아온 것은 A 본인 자료뿐 (B의 ID ' + hl.length + '개 발견)');
+          '헤더(' + hHeader + ')에 B를 적어도 돌아온 것은 A 본인 자료뿐 (B의 ID ' + hl.length + '개 발견)');
       }
       var b = await req('본문에 B의 계정을 적어 A 자신의 임시 문서에 저장', 'PATCH', '/users/' + uA + '/data/spoof', tA,
         { body: { fields: { ownerUid: { stringValue: uB }, note: { stringValue: 'B의 자료라고 적어 보냄' } } } });
@@ -289,6 +296,43 @@
       var t1 = await appA.auth().currentUser.getIdToken();
       var again = await req('다시 로그인해 새 값 T1(' + mask(t1) + ')로 요청', 'GET', same, t1);
       check(again.status === 200, '다시 로그인하면 새 값은 통과 (' + again.status + ') — 로그아웃 기록이 정상 사용자를 막지 않음');
+
+      log('\n── ③ 비밀번호를 바꾼 뒤 같은 로그인 값으로 요청 (계정 B) ──');
+      log('  (시험 동안 B의 비밀번호를 "원래 비밀번호 + !t7"로 잠깐 바꿨다가 원래대로 되돌립니다)');
+      var tmpPw = pwB + '!t7';
+      var sameB = '/users/' + uB + '/data/state';
+      var changed = false;
+      await sleep(2500);
+      var bBefore = await req('비밀번호 변경 전, 로그인 값 T0(' + mask(tB) + ')로 요청', 'GET', sameB, tB);
+      check(bBefore.status === 200, '비밀번호 변경 전 요청 성공 (' + bBefore.status + ')');
+      try{
+        var userB = appB.auth().currentUser;
+        await userB.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(emailB, pwB));
+        await userB.updatePassword(tmpPw);
+        changed = true;
+        await appB.firestore().collection('users').doc(uB).collection('session').doc('meta')
+          .set({ revokedAt: firebase.firestore.FieldValue.serverTimestamp() });
+        log('  (앱의 비밀번호 변경과 같은 순서: 다시 확인 → 비밀번호 변경 → 서버에 시각 기록 → 로그아웃)');
+      }catch(e){
+        log('  비밀번호 변경 시험 준비에 실패했습니다 (' + (e && e.code || '오류') + ')');
+      }
+      await appB.auth().signOut();
+      var bAfter = await req('비밀번호 변경 후, 같은 값 T0로 같은 주소·같은 방식으로 요청', 'GET', sameB, tB);
+      check(bAfter.status === 403 || bAfter.status === 404, '비밀번호를 바꾼 뒤 같은 값 거절 (' + bAfter.status + ') — 달라진 것은 비밀번호 변경뿐');
+      if(changed){
+        try{
+          await appB.auth().signInWithEmailAndPassword(emailB, tmpPw);
+          var tB1 = await appB.auth().currentUser.getIdToken();
+          var bAgain = await req('새 비밀번호로 로그인해 새 값 T1(' + mask(tB1) + ')로 요청', 'GET', sameB, tB1);
+          check(bAgain.status === 200, '새 비밀번호로 로그인하면 새 값은 통과 (' + bAgain.status + ')');
+          await appB.auth().currentUser.updatePassword(pwB);
+          await appB.auth().signOut();
+          await appB.auth().signInWithEmailAndPassword(emailB, pwB);
+          check(true, '시험이 바꾼 비밀번호를 원래대로 되돌렸고, 원래 비밀번호로 다시 로그인됨');
+        }catch(e){
+          warn('B의 비밀번호를 되돌리지 못했습니다 (' + (e && e.code || '오류') + '). 원래 비밀번호 뒤에 !t7을 붙인 값으로 로그인해 앱에서 비밀번호를 바꿔 주세요.');
+        }
+      }
     }catch(e){
       log('\n실행 중 오류: ' + (e && (e.code || e.message) || e));
     }finally{
